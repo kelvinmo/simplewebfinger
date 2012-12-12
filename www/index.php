@@ -33,8 +33,8 @@ function simplewebfinger_start() {
     $resource = $_GET['resource'];
     $resource = preg_replace('/^acct:/', '', $resource);
     
-    $json_file = basename($resource . '.json');
-    $xrd_file = basename($resource . '.xml');
+    $json_file = basename(rfc3986_urlencode($resource) . '.json');
+    $xrd_file = basename(rfc3986_urlencode($resource) . '.xml');
     
     if (file_exists($jrd_file)) {
         $json = file_get_contents($json_file);
@@ -110,6 +110,24 @@ function header_response_code($code) {
         header('Status: ' . $code);
     } else {
         header($_SERVER['SERVER_PROTOCOL'] . ' ' . $code);
+    }
+}
+
+/**
+ * Encodes a URL using RFC 3986.
+ *
+ * PHP's urlencode function encodes a URL using RFC 1738 for PHP versions
+ * prior to 5.3.  RFC 1738 has been updated by RFC 3986, which change the
+ * list of characters which needs to be encoded.
+ *
+ * @param string $s the URL to encode
+ * @return string the encoded URL
+ */
+function rfc3986_urlencode($s) {
+    if (version_compare(PHP_VERSION, '5.3.0', '>=')) {
+        return rawurlencode($s);
+    } else {
+        return str_replace('%7E', '~', rawurlencode($s));
     }
 }
 ?>
