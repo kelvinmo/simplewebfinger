@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">
+    <Expires>2012-03-13T20:56:11Z</Expires>
+    <Subject>acct:bob@example.com</Subject>
+    <Link rel="http://webfinger.net/rel/avatar"
+        href="http://www.example.com/~bob/bob.jpg"/>
+    <Link rel="http://webfinger.net/rel/profile-page"
+        href="http://www.example.com/~bob/"/>
+    <Link rel="http://packetizer.com/rel/blog"
+        href="http://blogs.example.com/bob/"/>
+</XRD>

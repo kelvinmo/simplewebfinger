@@ -1,0 +1,15 @@
+{
+   "expires" : "2012-03-13T20:56:11Z",
+   "subject" : "acct:alice@example.com",
+   "links" :
+   [
+     {
+       "rel" : "http://webfinger.net/rel/avatar",
+       "href" : "http://example.com/~alice/alice.jpg"
+     },
+     {
+       "rel" : "vcard",
+       "href" : "http://example.com/~alice/alice.vcf"
+     }
+   ]
+}
