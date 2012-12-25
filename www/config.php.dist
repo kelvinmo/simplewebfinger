@@ -1,0 +1,53 @@
+<?php
+/**
+ * SimpleWebFinger configuration file.
+ *
+ */
+
+
+/**
+ * Directory to store resource information.
+ *
+ * This directory must exist and be readable by the web server.
+ *
+ * For maximum security, it is highly recommended to place this
+ * directory outside your web browser's document root directory, so
+ * that it is not visible to user agents.
+ *
+ */
+define('SIMPLEWEBFINGER_RESOURCE_DIR', '@@RESOURCE_DIR@@');
+
+/**
+ * Cross-Origin Resource Sharing
+ *
+ * The domain access to be returned under the Access-Control-Allow-Origin
+ * response header.
+ *
+ * In most cases, the default value of * would allow all web browsers to
+ * access WebFinger resources.  If you want to restrict access to only
+ * certain domains, modify the value here.
+ *
+ */
+define('SIMPLEWEBFINGER_ACCESS_CONTROL_ALLOW_ORIGIN', '*');
+
+/**
+ * Debugging mode.
+ *
+ * Set the following to true to enable debugging mode.  In debugging mode,
+ * additional debugging information (including potentially security sensitive
+ * information is displayed along with the error message.
+ */
+define('SIMPLEWEBFINGER_DEBUG', FALSE);
+
+/**
+ * SimpleID integration.
+ *
+ * This directory must exist and be readable by the web server.
+ *
+ * For maximum security, it is highly recommended to place this
+ * directory outside your web browser's document root directory, so
+ * that it is not visible to user agents.
+ *
+ */
+// define('SIMPLEID_WWW_DIR', '');
+?>

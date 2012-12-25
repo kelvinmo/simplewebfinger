@@ -19,26 +19,37 @@
  * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  * 
  */
- 
-include_once "simplexrd.class.php";
+
+define('SIMPLEWEBFINGER_VERSION', '0.1');
+
+include_once 'simplexrd.class.php';
+
+// Check if the configuration file has been defined
+if (!file_exists('config.php')) {
+    fatal_error('500 Server Error', 'No configuration file found.  See the SimpleWebFinger documentation for instructions on how to set up a configuration file.');
+}
+include_once 'config.php';
 
 simplewebfinger_start();
 
+/**
+ * Main endpoint.
+ */
 function simplewebfinger_start() {
-    if (!isset($_GET['resource'])) {
-        fatal_error('400 Bad Request', 'resource parameter missing');
+    if (!isset($_GET['resource']) || ($_GET['resource'] == '')) {
+        fatal_error('400 Bad Request', 'resource parameter missing or empty');
         return;
     }
 
     $resource = $_GET['resource'];
-    $resource = preg_replace('/^acct:/', '', $resource);
     
-    $json_file = basename(rfc3986_urlencode($resource) . '.json');
-    $xrd_file = basename(rfc3986_urlencode($resource) . '.xml');
+    
+    $jrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(rfc3986_urlencode($resource) . '.json');
+    $xrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(rfc3986_urlencode($resource) . '.xml');
     
     if (file_exists($jrd_file)) {
-        $json = file_get_contents($json_file);
-        $jrd = json_decode($json);
+        $json = file_get_contents($jrd_file);
+        $jrd = json_decode($json, true);
     } elseif (file_exists($xrd_file)) {
         $xml = file_get_contents($xrd_file);
         
@@ -46,7 +57,8 @@ function simplewebfinger_start() {
         $jrd = $parser->parse($xml);
         $parser->free();
     } else {
-        fatal_error('404 Not Found', 'resource not found');
+        fatal_error('404 Not Found', 'resource not found', $jrd_file);
+        return;
     }
     
     if (isset($jrd['subject']) && ($jrd['subject'] != $resource)) {
@@ -79,21 +91,59 @@ function simplewebfinger_start() {
     }
 
     header('Content-Type: application/json');
-    header('Content-Disposition: inline; filename=xrd.json');
-    header('Access-Control-Allow-Origin: *');
+    header('Content-Disposition: inline; filename=webfinger.json');
+    header('Access-Control-Allow-Origin: ' . SIMPLEWEBFINGER_ACCESS_CONTROL_ALLOW_ORIGIN);
     
     print json_encode($jrd);
 
 }
 
-function fatal_error($code, $message) {
+/**
+ * Displays a fatal error message and exits.
+ *
+ * @param string $code the HTTP response status
+ * @param string $message the error message
+ * @param string $debug debugging information to be displayed if {@link SIMPLEWEBFINGER_DEBUG}
+ * is set tot true
+ */
+function fatal_error($code, $message, $debug = NULL) {
     header_response_code($code);
 ?>
 <!DOCTYPE html><html><head><title><?php print htmlspecialchars($code); ?></title></head>
-<body><h1><?php print htmlspecialchars($code); ?></h1><p><?php print htmlspecialchars($message); ?></p></body></html>
+<body>
+  <h1><?php print htmlspecialchars($code); ?></h1>
+  <p><?php print htmlspecialchars($message); ?></p>
+  <?php if (($debug != NULL) && SIMPLEWEBFINGER_DEBUG): ?>
+<pre>
+<?php print htmlspecialchars($debug) ?>
+</pre>
+  <?php endif; ?>
+</body>
+</html>
 <?php
     exit();
 }
+
+/* ---------------- SimpleID integration ---------------- */
+function simpleid_init() {
+}
+
+function get_jrd_from_simpleid_identity($identity_file) {
+
+    $jrd = array(
+        'subject' => '',
+        'links' => array(
+            array(
+                'rel' => 'http://openid.net/specs/connect/1.0/issuer',
+                'href' => SIMPLEID_URL . '/'
+            )
+        )
+    );
+
+    return $jrd;
+}
+
+/* ---------------- Miscellaneous functions ---------------- */
 
 /**
  * Send a HTTP response code to the user agent.
