@@ -49,5 +49,5 @@ define('SIMPLEWEBFINGER_DEBUG', FALSE);
  * that it is not visible to user agents.
  *
  */
-// define('SIMPLEID_WWW_DIR', '');
+// define('SIMPLEWEBFINGER_SIMPLEID_WWW_DIR', '');
 ?>

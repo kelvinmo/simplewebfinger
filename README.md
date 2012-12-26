@@ -13,6 +13,7 @@ Features include:
 - Resources can be described in either the original [XML notation](http://docs.oasis-open.org/xri/xrd/v1.0/xrd-1.0.html)
   or the newer JSON notation. SimpleWebFinger will translate into JSON as
   required
+- Integration with [SimpleID](http://simpleid.koinic.net/)
 - Flat files only, no database required
 
 
@@ -24,7 +25,8 @@ System Requirements
 
 Optional requirements:
 
-- [SimpleID](http://simpleid.koinic.net/) version x.x or later
+- [SimpleID](http://simpleid.koinic.net/) version 0.8 or later
+
 
 Installation
 ------------
@@ -85,6 +87,8 @@ You may also use a redirect instead of an alias.
 Usage
 -----
 
+### Describing resources
+
 Resource descriptor files are stored in the resources directory.  The name
 of each file is the [URL encoded](http://www.ietf.org/rfc/rfc3986.txt)
 representation of the resource's URI, followed by either `.xml` for
@@ -96,6 +100,16 @@ have the file name `acct%3Abob%40example.com.xml`.
 
 Note that certain features of XRD do not have equivalents in JRD.  These
 features will be ignored when translating the XRD document into JRD.
+
+### SimpleID integration
+
+SimpleWebFinger can be used as the WebFinger server for SimpleID.
+SimpleWebFinger can call SimpleID to look up an identity and creates a JRD
+document for that identity.  The JRD document created contains a pointer
+to the SimpleID installation.
+
+To enable SimpleID integration, edit the `SIMPLEWEBFINGER_SIMPLEID_WWW_DIR`
+parameter in `config.php` to point to the SimpleID web directory.
 
 Security Considerations
 -----------------------

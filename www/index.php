@@ -26,10 +26,11 @@ include_once 'simplexrd.class.php';
 
 // Check if the configuration file has been defined
 if (!file_exists('config.php')) {
-    fatal_error('500 Server Error', 'No configuration file found.  See the SimpleWebFinger documentation for instructions on how to set up a configuration file.');
+    simplewebfinger_fatal_error('500 Server Error', 'No configuration file found.  See the SimpleWebFinger documentation for instructions on how to set up a configuration file.');
 }
 include_once 'config.php';
 
+simplewebfinger_simpleid_init();
 simplewebfinger_start();
 
 /**
@@ -37,7 +38,7 @@ simplewebfinger_start();
  */
 function simplewebfinger_start() {
     if (!isset($_GET['resource']) || ($_GET['resource'] == '')) {
-        fatal_error('400 Bad Request', 'resource parameter missing or empty');
+        simplewebfinger_fatal_error('400 Bad Request', 'resource parameter missing or empty');
         return;
     }
 
@@ -45,7 +46,7 @@ function simplewebfinger_start() {
     $descriptor = simplewebfinger_get_descriptor($resource);
     
     if ($descriptor == NULL) {
-        fatal_error('404 Not Found', 'resource not found', $jrd_file);
+        simplewebfinger_fatal_error('404 Not Found', 'resource not found');
         return;
     }
     
@@ -64,12 +65,26 @@ function simplewebfinger_start() {
     print json_encode($jrd);
 }
 
-
+/**
+ * Returns an array containing metadata relating to the descriptor for a specified
+ * resource URI.
+ *
+ * This function looks up the XRD or JRD document corresponding to the resource
+ * URI specified in the $resource parameter.
+ *
+ * If SimpleID integration is enabled, this function also calls the
+ * {@link simplewebfinger_simpleid_get_user()} function.
+ *
+ * @param string $resource the resource URI to search
+ * @param array $aliases reserved for future use
+ * @param int $retry reserved for future use
+ * @return array an array containing metadata
+ */
 function simplewebfinger_get_descriptor($resource, $aliases = array(), $retry = 5) {
     $descriptor = array();
     
-    $jrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(rfc3986_urlencode($resource) . '.json');
-    $xrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(rfc3986_urlencode($resource) . '.xml');
+    $jrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(simplewebfinger_urlencode($resource) . '.json');
+    $xrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(simplewebfinger_urlencode($resource) . '.xml');
     
     if (file_exists($jrd_file)) {
         $descriptor['file'] = $jrd_file;
@@ -77,6 +92,12 @@ function simplewebfinger_get_descriptor($resource, $aliases = array(), $retry = 
     } elseif (file_exists($xrd_file)) {
         $descriptor['file'] = $xrd_file;
         $descriptor['format'] = 'xml';
+    } elseif (($user = simplewebfinger_simpleid_get_user($resource)) != NULL) {
+        $descriptor['simpleid'] = $user;
+        $descriptor['format'] = 'simpleid';
+        $descriptor['ctime'] = time();
+        $descriptor['mtime'] = time();
+        $descriptor['etag'] = sha1(serialize($user));
     } else {
         return NULL;
     }
@@ -90,8 +111,18 @@ function simplewebfinger_get_descriptor($resource, $aliases = array(), $retry = 
     return $descriptor;
 }
 
+/**
+ * Parses the descriptor metadata from the {@link simplewebfinger_get_descriptor()}
+ * function and returns a JRD-equivalent array structure.
+ *
+ * This function reads the resource descriptor file found in $descriptor['file']
+ * and parses it.
+ *
+ * @param array $descriptor the descriptor metadata
+ * @return array the JRD document
+ */
 function simplewebfinger_parse_descriptor($descriptor) {
-    $file = $descriptor['file'];
+    $file = (isset($descriptor['file'])) ? $descriptor['file'] : NULL;
     $format = $descriptor['format'];
     
     switch ($format) {
@@ -107,17 +138,17 @@ function simplewebfinger_parse_descriptor($descriptor) {
                 $jrd = $parser->parse($xml);
             } catch (Exception $e) {
                 $parser->free();  // finally block is supported only after PHP 5.5
-                fatal_error('500 Server Error', 'Unable to translate XRD file into JSON.', $e->getMessage());
+                simplewebfinger_fatal_error('500 Server Error', 'Unable to translate XRD file into JSON.', $e->getMessage());
             }
             $parser->free();
             
             return $jrd;
             break;
         case 'simpleid':
-            return get_jrd_from_simpleid_identity();
+            return simplewebfinger_simpleid_jrd($descriptor['simpleid']);
             break;
         default:
-            fatal_error('500 Server Error', 'Unsupported resource descriptor format.');
+            simplewebfinger_fatal_error('500 Server Error', 'Unsupported resource descriptor format.');
     }
 }
 
@@ -181,8 +212,8 @@ function simplewebfinger_filter_rel($jrd, $rels) {
  * @param string $debug debugging information to be displayed if {@link SIMPLEWEBFINGER_DEBUG}
  * is set tot true
  */
-function fatal_error($code, $message, $debug = NULL) {
-    header_response_code($code);
+function simplewebfinger_fatal_error($code, $message, $debug = NULL) {
+    simplewebfinger_header_response_code($code);
 ?>
 <!DOCTYPE html><html><head><title><?php print htmlspecialchars($code); ?></title></head>
 <body>
@@ -200,21 +231,101 @@ function fatal_error($code, $message, $debug = NULL) {
 }
 
 /* ---------------- SimpleID integration ---------------- */
-function simpleid_init() {
+/**
+ * Initialises SimpleID integration.
+ *
+ * This function loads various SimpleID code from the directory specified
+ * by the {@link SIMPLEWEBFINGER_SIMPLEID_WWW_DIR} parameter.  If this parameter is not set,
+ * this function does nothing.
+ *
+ */
+function simplewebfinger_simpleid_init() {
+    if (!defined('SIMPLEWEBFINGER_SIMPLEID_WWW_DIR')) return;
+    if (SIMPLEWEBFINGER_SIMPLEID_WWW_DIR == '') return;
+    
+    if (file_exists(SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/config.php')) {
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/version.inc.php';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/config.php';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/config.default.php';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/common.inc.php';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/user.inc.php';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/cache.inc.php';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/' . SIMPLEID_STORE . '.store.php';
+    } elseif (file_exists(SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/config.inc')) {
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/version.inc';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/config.inc';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/config.default.inc';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/common.inc';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/user.inc';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/cache.inc';
+        include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/' . SIMPLEID_STORE . '.store.inc';
+    } else {
+        simplewebfinger_fatal_error('500 Server Error', 'SimpleID files not found.  Check SIMPLEWEBFINGER_SIMPLEID_WWW_DIR in config.php.');
+    }
+    
+    define('CACHE_DIR', SIMPLEID_CACHE_DIR);
 }
 
-function get_jrd_from_simpleid_identity($identity_file) {
+/**
+ * Finds a SimpleID user array based on a specified resource URI.
+ *
+ * This function calls the relevant functions in SimpleID to find a SimpleID
+ * user whose identity URI matches the URI specified by $resource.
+ *
+ * @param string $resource the resource URI to find
+ * @return array the SimpleID user array if found, otherwise NULL
+ */
+function simplewebfinger_simpleid_get_user($resource) {
+    if (!defined('SIMPLEWEBFINGER_SIMPLEID_WWW_DIR')) return NULL;
+    if (SIMPLEWEBFINGER_SIMPLEID_WWW_DIR == '') return NULL;
+    
+    // We need to temporarily change the working directory to SimpleID
+    $pwd = getcwd();
+    chdir(SIMPLEWEBFINGER_SIMPLEID_WWW_DIR);
+    
+    $user = user_load_from_identity($resource);
+    
+    chdir($pwd);
+    
+    return $user;
+}
 
+/**
+ * Creates a JRD document based on a SimpleID user.
+ *
+ * The JRD document created is very simple - it merely points to the
+ * SimpleID installation as the OpenID connect provider.
+ *
+ * @param array $user the SimpleID user
+ * @return array the JRD document
+ */
+function simplewebfinger_simpleid_jrd($user) {
     $jrd = array(
-        'subject' => '',  // TODO
+        'subject' => $user['identity'],
         'links' => array(
             array(
-                'rel' => 'http://openid.net/specs/connect/1.0/issuer',
-                'href' => SIMPLEID_URL . '/'
+                'rel' => 'http://specs.openid.net/auth/2.0/provider',
+                'href' => SIMPLEID_BASE_URL . '/'
             )
         )
     );
-
+    
+    if (isset($user['aliases'])) {
+        if (is_array($user['aliases'])) {
+            $jrd['aliases'] = $user['aliases'];
+        } else {
+            $jrd['aliases'] = array($user['aliases']);
+        }
+    }
+    
+    if (version_compare(SIMPLEID_VERSION, '2.0', '>=')) {
+        // SimpleID version 2.0 supports OpenID connect
+        $jrd['links'][] = array(
+            'rel' => 'http://openid.net/specs/connect/1.0/issuer',
+            'href' => SIMPLEID_BASE_URL . '/'
+        );
+    }
+    
     return $jrd;
 }
 
@@ -230,7 +341,7 @@ function get_jrd_from_simpleid_identity($identity_file) {
  *
  * @param string $code the response code along
  */
-function header_response_code($code) {
+function simplewebfinger_header_response_code($code) {
     if (substr(PHP_SAPI, 0,3) === 'cgi') {
         header('Status: ' . $code);
     } else {
@@ -248,7 +359,7 @@ function header_response_code($code) {
  * @param string $s the URL to encode
  * @return string the encoded URL
  */
-function rfc3986_urlencode($s) {
+function simplewebfinger_urlencode($s) {
     if (version_compare(PHP_VERSION, '5.3.0', '>=')) {
         return rawurlencode($s);
     } else {
