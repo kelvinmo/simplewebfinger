@@ -123,3 +123,7 @@ Licensing
 
 Licensing information for SimpleWebFinger can be found in the file
 COPYING.txt.
+
+SimpleWebFinger uses the [SimpleXRD library](https://github.com/kelvinmo/simplexrd).
+SimpleXRD is licensed under the Modified BSD Licence.  Licensing terms can
+be found in the header to the file `simplexrd.class.php`.
