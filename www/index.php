@@ -54,28 +54,73 @@ function simplewebfinger_start() {
         $xml = file_get_contents($xrd_file);
         
         $parser = new SimpleXRD();
-        $jrd = $parser->parse($xml);
+        
+        try {
+            $jrd = $parser->parse($xml);
+        } catch (Exception $e) {
+            $parser->free();  // finally block is supported only after PHP 5.5
+            fatal_error('500 Server Error', 'Unable to translate XRD file into JSON.', $e->getMessage());
+        }
         $parser->free();
     } else {
         fatal_error('404 Not Found', 'resource not found', $jrd_file);
         return;
     }
     
-    if (isset($jrd['subject']) && ($jrd['subject'] != $resource)) {
-        if (isset($jrd['aliases'])) {
-            $jrd['aliases'][] = $jrd['subject'];
-        } else {
-            $jrd['aliases'] = array($jrd['subject']);
+    $jrd = simplewebfinger_fix_alias($jrd, $resource);
+    
+    if (isset($_GET['rel'])) $jrd = simplewebfinger_filter_rel($jrd, $_GET['rel']);
+
+    header('Content-Type: application/json');
+    header('Content-Disposition: inline; filename=webfinger.json');
+    header('Access-Control-Allow-Origin: ' . SIMPLEWEBFINGER_ACCESS_CONTROL_ALLOW_ORIGIN);
+    
+    print json_encode($jrd);
+
+}
+
+
+function simplewebfinger_get_jrd($resource, $aliases = array(), $retry = 5) {
+}
+
+/**
+ * Ensures that a specified resource URI occurs in either the subject or
+ * the aliases member of a JRD document.
+ *
+ * @param array $jrd the JRD document
+ * @param string $resource the resource URI
+ * @return array the fixed JRD document
+ */
+function simplewebfinger_fix_alias($jrd, $resource) {
+    if (isset($jrd['subject']) && ($jrd['subject'] == $resource)) return $jrd;
+    
+    if (isset($jrd['aliases'])) {
+        $found = FALSE;
+        foreach ($jrd['aliases'] as $alias) {
+            if ($alias == $resource) {
+                $found = TRUE;
+                break;
+            }
+            if (!$found) $jrd['aliases'][] = $resource;
         }
+    } else {
+        $jrd['aliases'] = array($resource);
     }
-    
-    $jrd['subject'] = $resource;
-    
-    if (isset($_GET['rel'])) {
-        if (is_array($_GET['rel'])) {
-            $rels = $_GET['rel'];
-         } else {
-            $rels = array($_GET['rel']);
+    return $jrd;
+}
+
+/**
+ * Filters a JRD document for specified link relations.
+ *
+ * @param array $jrd the JRD document
+ * @param string|array $rels a string contain a link relation, or an array containing
+ * multiple link relations, to filter
+ * @return array the filtered JRD document
+ */
+function simplewebfinger_filter_rel($jrd, $rels) {
+    if (isset($jrd['links'])) {
+        if (!is_array($rels)) 
+            $rels = array($rels);
          }
          
          $links = $jrd['links'];
@@ -89,13 +134,7 @@ function simplewebfinger_start() {
          
          $jrd['links'] = $filtered_links;
     }
-
-    header('Content-Type: application/json');
-    header('Content-Disposition: inline; filename=webfinger.json');
-    header('Access-Control-Allow-Origin: ' . SIMPLEWEBFINGER_ACCESS_CONTROL_ALLOW_ORIGIN);
-    
-    print json_encode($jrd);
-
+    return $jrd;
 }
 
 /**
@@ -131,7 +170,7 @@ function simpleid_init() {
 function get_jrd_from_simpleid_identity($identity_file) {
 
     $jrd = array(
-        'subject' => '',
+        'subject' => '',  // TODO
         'links' => array(
             array(
                 'rel' => 'http://openid.net/specs/connect/1.0/issuer',
