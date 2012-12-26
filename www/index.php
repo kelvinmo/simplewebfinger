@@ -42,30 +42,14 @@ function simplewebfinger_start() {
     }
 
     $resource = $_GET['resource'];
+    $descriptor = simplewebfinger_get_descriptor($resource);
     
-    
-    $jrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(rfc3986_urlencode($resource) . '.json');
-    $xrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(rfc3986_urlencode($resource) . '.xml');
-    
-    if (file_exists($jrd_file)) {
-        $json = file_get_contents($jrd_file);
-        $jrd = json_decode($json, true);
-    } elseif (file_exists($xrd_file)) {
-        $xml = file_get_contents($xrd_file);
-        
-        $parser = new SimpleXRD();
-        
-        try {
-            $jrd = $parser->parse($xml);
-        } catch (Exception $e) {
-            $parser->free();  // finally block is supported only after PHP 5.5
-            fatal_error('500 Server Error', 'Unable to translate XRD file into JSON.', $e->getMessage());
-        }
-        $parser->free();
-    } else {
+    if ($descriptor == NULL) {
         fatal_error('404 Not Found', 'resource not found', $jrd_file);
         return;
     }
+    
+    $jrd = simplewebfinger_parse_descriptor($descriptor);
     
     $jrd = simplewebfinger_fix_alias($jrd, $resource);
     
@@ -74,13 +58,67 @@ function simplewebfinger_start() {
     header('Content-Type: application/json');
     header('Content-Disposition: inline; filename=webfinger.json');
     header('Access-Control-Allow-Origin: ' . SIMPLEWEBFINGER_ACCESS_CONTROL_ALLOW_ORIGIN);
-    
-    print json_encode($jrd);
+    header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $descriptor['mtime']) . ' GMT');
+    header('Etag: ' . $descriptor['etag']);
 
+    print json_encode($jrd);
 }
 
 
-function simplewebfinger_get_jrd($resource, $aliases = array(), $retry = 5) {
+function simplewebfinger_get_descriptor($resource, $aliases = array(), $retry = 5) {
+    $descriptor = array();
+    
+    $jrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(rfc3986_urlencode($resource) . '.json');
+    $xrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(rfc3986_urlencode($resource) . '.xml');
+    
+    if (file_exists($jrd_file)) {
+        $descriptor['file'] = $jrd_file;
+        $descriptor['format'] = 'json';
+    } elseif (file_exists($xrd_file)) {
+        $descriptor['file'] = $xrd_file;
+        $descriptor['format'] = 'xml';
+    } else {
+        return NULL;
+    }
+    
+    if (isset($descriptor['file'])) {
+        $descriptor['ctime'] = filectime($descriptor['file']);
+        $descriptor['mtime'] = filemtime($descriptor['file']);
+        $descriptor['etag'] = sha1_file($descriptor['file']);
+    }
+    
+    return $descriptor;
+}
+
+function simplewebfinger_parse_descriptor($descriptor) {
+    $file = $descriptor['file'];
+    $format = $descriptor['format'];
+    
+    switch ($format) {
+        case 'json':
+            $json = file_get_contents($file);
+            return json_decode($json, true);
+            break;
+        case 'xml':
+            $xml = file_get_contents($file);
+            $parser = new SimpleXRD();
+        
+            try {
+                $jrd = $parser->parse($xml);
+            } catch (Exception $e) {
+                $parser->free();  // finally block is supported only after PHP 5.5
+                fatal_error('500 Server Error', 'Unable to translate XRD file into JSON.', $e->getMessage());
+            }
+            $parser->free();
+            
+            return $jrd;
+            break;
+        case 'simpleid':
+            return get_jrd_from_simpleid_identity();
+            break;
+        default:
+            fatal_error('500 Server Error', 'Unsupported resource descriptor format.');
+    }
 }
 
 /**
@@ -119,20 +157,18 @@ function simplewebfinger_fix_alias($jrd, $resource) {
  */
 function simplewebfinger_filter_rel($jrd, $rels) {
     if (isset($jrd['links'])) {
-        if (!is_array($rels)) 
-            $rels = array($rels);
-         }
+        if (!is_array($rels))  $rels = array($rels);
          
-         $links = $jrd['links'];
-         $filtered_links = array();
-         
-         foreach ($links as $link) {
+        $links = $jrd['links'];
+        $filtered_links = array();
+        
+        foreach ($links as $link) {
             if (isset($link['rel']) && in_array($link['rel'], $rels)) {
                 $filtered_links[] = $link;
             }
-         }
-         
-         $jrd['links'] = $filtered_links;
+        }
+        
+        $jrd['links'] = $filtered_links;
     }
     return $jrd;
 }
