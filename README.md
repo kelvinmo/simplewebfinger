@@ -98,6 +98,8 @@ or `.json` for JSON formatted JRD files.
 For example, the XRD file for the resource `acct:bob@example.com` would
 have the file name `acct%3Abob%40example.com.xml`.
 
+See the resources directory for examples.
+
 Note that certain features of XRD do not have equivalents in JRD.  These
 features will be ignored when translating the XRD document into JRD.
 
