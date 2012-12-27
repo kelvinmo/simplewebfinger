@@ -22,11 +22,13 @@
 
 define('SIMPLEWEBFINGER_VERSION', '0.1');
 
+$log = '';
+
 include_once 'simplexrd.class.php';
 
 // Check if the configuration file has been defined
 if (!file_exists('config.php')) {
-    simplewebfinger_fatal_error('500 Server Error', 'No configuration file found.  See the SimpleWebFinger documentation for instructions on how to set up a configuration file.');
+    simplewebfinger_fatal_error('500 Server Error', 'No configuration file (config.php) found.  See the SimpleWebFinger documentation for instructions on how to set up a configuration file.');
 }
 include_once 'config.php';
 
@@ -37,16 +39,20 @@ simplewebfinger_start();
  * Main endpoint.
  */
 function simplewebfinger_start() {
+    global $log;
+    
     if (!isset($_GET['resource']) || ($_GET['resource'] == '')) {
         simplewebfinger_fatal_error('400 Bad Request', 'resource parameter missing or empty');
         return;
     }
 
     $resource = $_GET['resource'];
+    $log .= "\nRequested resource URI: $resource";
+    
     $descriptor = simplewebfinger_get_descriptor($resource);
     
     if ($descriptor == NULL) {
-        simplewebfinger_fatal_error('404 Not Found', 'resource not found');
+        simplewebfinger_fatal_error('404 Not Found', 'Resource not found', $log);
         return;
     }
     
@@ -81,24 +87,32 @@ function simplewebfinger_start() {
  * @return array an array containing metadata
  */
 function simplewebfinger_get_descriptor($resource, $aliases = array(), $retry = 5) {
+    global $log;
+    
     $descriptor = array();
     
     $jrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(simplewebfinger_urlencode($resource) . '.json');
     $xrd_file = SIMPLEWEBFINGER_RESOURCE_DIR . '/' . basename(simplewebfinger_urlencode($resource) . '.xml');
     
+    $log .= "\nLook for $jrd_file or $xrd_file";
+    
     if (file_exists($jrd_file)) {
+        $log .= "\nResource file found: $jrd_file";
         $descriptor['file'] = $jrd_file;
         $descriptor['format'] = 'json';
     } elseif (file_exists($xrd_file)) {
+        $log .= "\nResource file found: $xrd_file";
         $descriptor['file'] = $xrd_file;
         $descriptor['format'] = 'xml';
     } elseif (($user = simplewebfinger_simpleid_get_user($resource)) != NULL) {
+        $log .= "\nSimpleID identity found: " . $user['uid'];
         $descriptor['simpleid'] = $user;
         $descriptor['format'] = 'simpleid';
         $descriptor['ctime'] = time();
         $descriptor['mtime'] = time();
         $descriptor['etag'] = sha1(serialize($user));
     } else {
+        $log .= "\nNothing found";
         return NULL;
     }
     
@@ -122,15 +136,19 @@ function simplewebfinger_get_descriptor($resource, $aliases = array(), $retry = 
  * @return array the JRD document
  */
 function simplewebfinger_parse_descriptor($descriptor) {
+    global $log;
+    
     $file = (isset($descriptor['file'])) ? $descriptor['file'] : NULL;
     $format = $descriptor['format'];
     
     switch ($format) {
         case 'json':
+            $log .= "\nParsing JSON file: $file";
             $json = file_get_contents($file);
             return json_decode($json, true);
             break;
         case 'xml':
+            $log .= "\nParsing XML file: $file";
             $xml = file_get_contents($file);
             $parser = new SimpleXRD();
         
@@ -138,17 +156,19 @@ function simplewebfinger_parse_descriptor($descriptor) {
                 $jrd = $parser->parse($xml);
             } catch (Exception $e) {
                 $parser->free();  // finally block is supported only after PHP 5.5
-                simplewebfinger_fatal_error('500 Server Error', 'Unable to translate XRD file into JSON.', $e->getMessage());
+                $log .= "\nXML parsing exception: " . $e->getMessage();
+                simplewebfinger_fatal_error('500 Server Error', 'Unable to translate XRD file into JSON.', $log);
             }
             $parser->free();
             
             return $jrd;
             break;
         case 'simpleid':
+            $log .= "\nCreating JRD from SimpleID user";
             return simplewebfinger_simpleid_jrd($descriptor['simpleid']);
             break;
         default:
-            simplewebfinger_fatal_error('500 Server Error', 'Unsupported resource descriptor format.');
+            simplewebfinger_fatal_error('500 Server Error', 'Unsupported resource descriptor format.', $log);
     }
 }
 
@@ -240,8 +260,12 @@ function simplewebfinger_fatal_error($code, $message, $debug = NULL) {
  *
  */
 function simplewebfinger_simpleid_init() {
+    global $log;
+    
     if (!defined('SIMPLEWEBFINGER_SIMPLEID_WWW_DIR')) return;
     if (SIMPLEWEBFINGER_SIMPLEID_WWW_DIR == '') return;
+    
+    $log .= "\nLoading SimpleID from: " . SIMPLEWEBFINGER_SIMPLEID_WWW_DIR;
     
     if (file_exists(SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/config.php')) {
         include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/version.inc.php';
@@ -260,7 +284,7 @@ function simplewebfinger_simpleid_init() {
         include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/cache.inc';
         include_once SIMPLEWEBFINGER_SIMPLEID_WWW_DIR . '/' . SIMPLEID_STORE . '.store.inc';
     } else {
-        simplewebfinger_fatal_error('500 Server Error', 'SimpleID files not found.  Check SIMPLEWEBFINGER_SIMPLEID_WWW_DIR in config.php.');
+        simplewebfinger_fatal_error('500 Server Error', 'SimpleID files not found.  Check SIMPLEWEBFINGER_SIMPLEID_WWW_DIR in config.php.', $log);
     }
     
     define('CACHE_DIR', SIMPLEID_CACHE_DIR);
@@ -276,12 +300,16 @@ function simplewebfinger_simpleid_init() {
  * @return array the SimpleID user array if found, otherwise NULL
  */
 function simplewebfinger_simpleid_get_user($resource) {
+    global $log;
+    
     if (!defined('SIMPLEWEBFINGER_SIMPLEID_WWW_DIR')) return NULL;
     if (SIMPLEWEBFINGER_SIMPLEID_WWW_DIR == '') return NULL;
     
     // We need to temporarily change the working directory to SimpleID
     $pwd = getcwd();
     chdir(SIMPLEWEBFINGER_SIMPLEID_WWW_DIR);
+    
+    $log .= "\nSearching SimpleID identities";
     
     $user = user_load_from_identity($resource);
     
