@@ -42,11 +42,13 @@ define('SIMPLEWEBFINGER_DEBUG', FALSE);
 /**
  * SimpleID integration.
  *
- * This directory must exist and be readable by the web server.
+ * SimpleWebFinger can be used as the WebFinger server for SimpleID.
+ * SimpleWebFinger can call SimpleID to look up an identity and creates a JRD
+ * document for that identity.
  *
- * For maximum security, it is highly recommended to place this
- * directory outside your web browser's document root directory, so
- * that it is not visible to user agents.
+ * To enable SimpleID integration, uncomment the line below and set
+ * SIMPLEWEBFINGER_SIMPLEID_WWW_DIR to the directory of the SimpleID web
+ * directory (i.e. where index.php is located).
  *
  */
 // define('SIMPLEWEBFINGER_SIMPLEID_WWW_DIR', '');
