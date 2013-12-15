@@ -182,7 +182,7 @@ class SimpleXRD {
                     if (isset($this->attribs[$this->XSI_NS . ':nil']) && ($this->attribs[$this->XSI_NS . ':nil'] == 'true')) {
                         $value = NULL;
                     } else {
-                        $value = $this->buffer;
+                        $value = strval($this->buffer);
                     }
                     if (is_null($this->link)) {
                         if (!isset($this->jrd['properties'])) $this->jrd['properties'] = array();
@@ -204,7 +204,7 @@ class SimpleXRD {
                     if (isset($this->attribs[$this->XML_NS . ':lang'])) {
                         $lang = $this->attribs[$this->XML_NS . ':lang'];
                     } else {
-                        $lang = 'default';
+                        $lang = 'und';
                     }
                     if (!isset($this->link['titles'])) $this->link['titles'] = array();
                     $this->link['titles'][$lang] = $this->buffer;
