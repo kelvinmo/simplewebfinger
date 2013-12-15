@@ -1,3 +1,13 @@
+SimpleWebFinger 1.0
+-------------------
+
+- Updated compliance to RFC 7033:
+    * Updated version of SimpleXRD to version 2.0 (removing <Expires> element
+      from JRD)
+    * Support for HEAD request method
+- Enhanced documentation on security considerations
+
+
 SimpleWebFinger 0.1
 -------------------
 

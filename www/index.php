@@ -68,6 +68,8 @@ function simplewebfinger_start() {
     header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $descriptor['mtime']) . ' GMT');
     header('Etag: ' . $descriptor['etag']);
 
+    if ($_SERVER['REQUEST_METHOD'] == 'HEAD') return;
+
     print json_encode($jrd);
 }
 

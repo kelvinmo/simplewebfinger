@@ -2,17 +2,16 @@ simplewebfinger
 ===============
 
 SimpleWebFinger is an extraordinarily simple 
-[WebFinger](http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-07)
-server written in PHP 5.
+[WebFinger](http://tools.ietf.org/html/rfc7033) server written in PHP 5.
 
 Features include:
 
-- Support for [WebFinger Internet-Draft 11](http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-11)
+- Support for WebFinger as specified in [RFC 7033](http://tools.ietf.org/html/rfc7033)
 - Multiple resources with one installation. You can use SimpleWebFinger to serve
   as many resources as you want
 - Resources can be described in either the original [XML notation](http://docs.oasis-open.org/xri/xrd/v1.0/xrd-1.0.html)
-  or the newer JSON notation. SimpleWebFinger will translate into JSON as
-  required
+  or the newer JSON notation specified in RFC 7044. SimpleWebFinger will
+  translate into JSON as required
 - Integration with [SimpleID](http://simpleid.koinic.net/)
 - Flat files only, no database required
 
@@ -60,7 +59,7 @@ anything you like.
 ### 3. Set up configuration options
 
 Make a copy of the file `config.php.dist` in the web directory and rename it
-`config.inc`.
+`config.php`.
 
 Open the file with a text editor and edit the configuration options. The file
 is formatted as a plain PHP file.
@@ -119,6 +118,12 @@ Security Considerations
 SimpleWebFinger does not test whether the connection is secured.  You are
 responsible for ensuring that the conneciton to SimpleWebFinger is under
 HTTPS, as required by the specification.
+
+SimpleWebFinger does not implement any mechanism to protect the server from
+malicious usage, including harvesting or denial-of-service attacks.  You are
+responsible for implementing mechanisms, such as packet filters and IP address
+rate-limiting to mitigate against such malicious usage.  See [RFC 7033](http://tools.ietf.org/html/rfc7033)
+for further details.
 
 Licensing
 ---------
