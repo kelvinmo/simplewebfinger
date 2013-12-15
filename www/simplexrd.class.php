@@ -172,7 +172,6 @@ class SimpleXRD {
         if ($ns == $this->XRD_NS) {
             switch ($name) {
                 case 'Subject':
-                case 'Expires':
                     $this->jrd[strtolower($name)] = $this->buffer;
                     break;
                 case 'Alias':
