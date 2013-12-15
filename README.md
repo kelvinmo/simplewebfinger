@@ -7,7 +7,7 @@ server written in PHP 5.
 
 Features include:
 
-- Support for [WebFinger Internet-Draft 8](http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-08)
+- Support for [WebFinger Internet-Draft 11](http://tools.ietf.org/html/draft-ietf-appsawg-webfinger-11)
 - Multiple resources with one installation. You can use SimpleWebFinger to serve
   as many resources as you want
 - Resources can be described in either the original [XML notation](http://docs.oasis-open.org/xri/xrd/v1.0/xrd-1.0.html)

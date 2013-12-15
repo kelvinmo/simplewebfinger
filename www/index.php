@@ -62,7 +62,7 @@ function simplewebfinger_start() {
     
     if (isset($_GET['rel'])) $jrd = simplewebfinger_filter_rel($jrd, $_GET['rel']);
 
-    header('Content-Type: application/json');
+    header('Content-Type: application/jrd+json');
     header('Content-Disposition: inline; filename=webfinger.json');
     header('Access-Control-Allow-Origin: ' . SIMPLEWEBFINGER_ACCESS_CONTROL_ALLOW_ORIGIN);
     header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $descriptor['mtime']) . ' GMT');
