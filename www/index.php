@@ -41,6 +41,15 @@ simplewebfinger_start();
 function simplewebfinger_start() {
     global $log;
     
+    // Capture remote address
+    $remote_addr = $_SERVER['REMOTE_ADDR'];
+    
+    if (simplewebfinger_is_limited($remote_addr, SIMPLEWEBFINGER_LIMIT_DELAY)) {
+        header('Retry-After: ' . SIMPLEWEBFINGER_LIMIT_DELAY);
+        // We never display a log for rate limit errors
+        simplewebfinger_fatal_error('429 Too Many Requests', 'Client has been blocked from making further requests');
+    }
+    
     if (!isset($_GET['resource']) || ($_GET['resource'] == '')) {
         simplewebfinger_fatal_error('400 Bad Request', 'resource parameter missing or empty');
         return;
@@ -52,6 +61,7 @@ function simplewebfinger_start() {
     $descriptor = simplewebfinger_get_descriptor($resource);
     
     if ($descriptor == NULL) {
+        simplewebfinger_apply_limit($remote_addr);  // Stop $remote_addr from querying again
         simplewebfinger_fatal_error('404 Not Found', 'Resource not found', $log);
         return;
     }
@@ -224,6 +234,26 @@ function simplewebfinger_filter_rel($jrd, $rels) {
         $jrd['links'] = $filtered_links;
     }
     return $jrd;
+}
+
+function simplewebfinger_is_limited($id, $delay = 5) {
+    $filename = SIMPLEWEBFINGER_CACHE_DIR . '/' . md5($id) . '.limit';
+    if (!file_exists($filename)) return false;
+    
+    if ((filetype($filename) == "file") && (filectime($filename) < time() - $delay)) {
+        unlink($filename);
+        return false;
+    }
+    
+    return true;
+}
+
+function simplewebfinger_apply_limit($id) {
+    $filename = SIMPLEWEBFINGER_CACHE_DIR . '/' . md5($id) . '.limit';
+    $file = fopen($filename, 'w');
+    fwrite($file, serialize(array('id' => $id, 'time' => time())));
+    fflush($file);
+    fclose($file);
 }
 
 /**

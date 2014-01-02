@@ -1,3 +1,9 @@
+SimpleWebFinger 1.1
+-------------------
+
+- Implemented simple rate limiting
+
+
 SimpleWebFinger 1.0
 -------------------
 

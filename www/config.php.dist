@@ -18,6 +18,18 @@
 define('SIMPLEWEBFINGER_RESOURCE_DIR', '@@RESOURCE_DIR@@');
 
 /**
+ * Directory to store rate limit cache data.
+ *
+ * This directory must exist and be readable and writable by the
+ * web server.
+ *
+ * For maximum security, it is highly recommended to place this
+ * directory on a RAM disk.
+ *
+ */
+define('SIMPLEWEBFINGER_CACHE_DIR', '@@CACHE_DIR@@');
+
+/**
  * Cross-Origin Resource Sharing
  *
  * The domain access to be returned under the Access-Control-Allow-Origin
@@ -29,6 +41,18 @@ define('SIMPLEWEBFINGER_RESOURCE_DIR', '@@RESOURCE_DIR@@');
  *
  */
 define('SIMPLEWEBFINGER_ACCESS_CONTROL_ALLOW_ORIGIN', '*');
+
+/**
+ * Rate limit: delay for failed requests
+ *
+ * In order to mitigate against harvesting attempts, SimpleWebFinger prevents
+ * a client (identified by its IP address) from querying the server again
+ * for a specified time after a request for a non-existent resource.
+ *
+ * This delay should be specified in seconds.
+ *
+ */
+define('SIMPLEWEBFINGER_LIMIT_DELAY', 5);
 
 /**
  * Debugging mode.

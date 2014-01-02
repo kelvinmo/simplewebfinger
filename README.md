@@ -119,7 +119,7 @@ SimpleWebFinger does not test whether the connection is secured.  You are
 responsible for ensuring that the conneciton to SimpleWebFinger is under
 HTTPS, as required by the specification.
 
-SimpleWebFinger does not implement any mechanism to protect the server from
+SimpleWebFinger implements only primitive mechanisms to protect the server from
 malicious usage, including harvesting or denial-of-service attacks.  You are
 responsible for implementing mechanisms, such as packet filters and IP address
 rate-limiting to mitigate against such malicious usage.  See [RFC 7033](http://tools.ietf.org/html/rfc7033)
