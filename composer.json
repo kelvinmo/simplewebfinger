@@ -1,0 +1,18 @@
+{
+    "name": "kelvinmo/simplewebfinger",
+    "description": "A simple, personal webfinger server written in PHP.",
+    "require": {
+        "php": ">=5.1.2",
+        "kelvinmo/simplexrd": "2.*"
+    },
+    "license": "GPL-2.0+",
+    "authors": [
+        {
+            "name": "Kelvin Mo",
+            "email": "kmo@users.sourceforge.net"
+        }
+    ],
+    "config": {
+        "vendor-dir": "www/vendor"
+    }
+}

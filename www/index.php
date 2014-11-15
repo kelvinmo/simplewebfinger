@@ -20,11 +20,11 @@
  * 
  */
 
-define('SIMPLEWEBFINGER_VERSION', '0.1');
+define('SIMPLEWEBFINGER_VERSION', '1.2');
 
 $log = '';
 
-include_once 'simplexrd.class.php';
+include_once 'vendor/autoload.php';
 
 // Check if the configuration file has been defined
 if (!file_exists('config.php')) {
