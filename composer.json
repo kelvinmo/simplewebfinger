@@ -1,9 +1,10 @@
 {
     "name": "kelvinmo/simplewebfinger",
     "description": "A simple, personal webfinger server written in PHP.",
+    "type": "project",
     "require": {
-        "php": ">=5.1.2",
-        "kelvinmo/simplexrd": "2.*"
+        "php": "^5.2 | ^7.0",
+        "kelvinmo/simplexrd": "^3.0"
     },
     "license": "GPL-2.0+",
     "authors": [

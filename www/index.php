@@ -165,7 +165,8 @@ function simplewebfinger_parse_descriptor($descriptor) {
             $parser = new SimpleXRD();
         
             try {
-                $jrd = $parser->parse($xml);
+                $parser->load($xml);
+                $jrd = $parser->parse();
             } catch (Exception $e) {
                 $parser->free();  // finally block is supported only after PHP 5.5
                 $log .= "\nXML parsing exception: " . $e->getMessage();
